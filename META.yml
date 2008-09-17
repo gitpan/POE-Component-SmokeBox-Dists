@@ -17,14 +17,14 @@ no_index:
     - t
     - examples
 requires:
+  CPAN::DistnameInfo: 0.06
   File::Fetch: 0
   File::Path: 0
   File::Spec: 0
   IO::Zlib: 0
   POE: 1.0001
-  Parse::CPAN::Packages: 2.29
   URI: 0
   perl: 5.6.0
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.02
+version: 0.04

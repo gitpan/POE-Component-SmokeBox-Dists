@@ -8,13 +8,13 @@ use File::Spec ();
 use File::Path (qw/mkpath/);
 use URI;
 use File::Fetch;
-use Parse::CPAN::Packages;
+use CPAN::DistnameInfo;
 use IO::Zlib;
 use POE qw(Wheel::Run);
 
 use vars qw($VERSION);
 
-$VERSION = '0.02';
+$VERSION = '0.04';
 
 sub author {
   my $package = shift;
@@ -88,8 +88,6 @@ sub _start {
 sub _initialise {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
   my $return = { };
-
-  $self->{packages} = Parse::CPAN::Packages->new();
 
   my $smokebox_dir = File::Spec->catdir( _smokebox_dir(), '.smokebox' );
   
@@ -180,9 +178,10 @@ sub _fetch_close {
 
 sub _spawn_process {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
+  $self->{dists} = [ ];
   $self->{PROCESS} = POE::Wheel::Run->new(
 	Program     => \&_read_packages,
-	ProgramArgs => [ $self->{pack_file} ],
+	ProgramArgs => [ $self->{pack_file}, $self->{command}, $self->{search} ],
 	StdoutEvent => '_proc_sout',
 	StderrEvent => '_fetch_serr',
 	ErrorEvent  => '_fetch_err',             # Event to emit on errors.
@@ -194,35 +193,41 @@ sub _spawn_process {
 
 sub _proc_sout {
   my ($self,$line) = @_[OBJECT,ARG0];
-  my ( $package_name, $package_version, $prefix ) = split ' ', $line;
-  $self->{packages}->add_quick( $package_name, $package_version, $prefix );
+  push @{ $self->{dists} }, $line;
   return;
 }
 
 sub _proc_close {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
   delete $self->{PROCESS};
-  my $search = $self->{search};
-  my @dists;
-  if ( $self->{command} eq 'author' ) {
-     @dists = sort map { $_->prefix } grep { eval { $_->dist && $_->cpanid =~ /$search/ }; } $self->{packages}->distributions; 
-  }
-  else {
-     @dists = sort map { $_->prefix } grep { eval { $_->dist && $_->dist =~ /$search/ }; } $self->{packages}->distributions; 
-  }
-  $self->{return}->{dists} = \@dists;
+  $self->{return}->{dists} = delete $self->{dists};
   $kernel->yield( '_dispatch', $self->{return} );
   return;
 }
 
 sub _read_packages {
-  my $packages_file = shift;
+  my ($packages_file,$command,$search) = @_;
   my $fh = IO::Zlib->new( $packages_file, "rb" ) or die "$!\n";
+  my %dists;
   while (<$fh>) {
      last if /^\s*$/;
   }
   while (<$fh>) {
-     print $_;
+    chomp;
+    my $path = ( split ' ', $_ )[2];
+    next unless $path;
+    next if exists $dists{ $path };
+    my $distinfo = CPAN::DistnameInfo->new( $path );
+    next unless $distinfo->filename() =~ m!(\.tar\.gz|\.tgz|\.zip)$!i;
+    if ( $command eq 'author' ) {
+       next unless eval { $distinfo->cpanid() =~ /$search/ };
+       print $path, "\n";
+    }
+    else {
+       next unless eval { $distinfo->distvname() =~ /$search/ };
+       print $path, "\n";
+    }
+    $dists{ $path } = 1;
   }
   return;
 }
@@ -313,7 +318,7 @@ POE::Component::SmokeBox::Dists - Search for CPAN distributions by cpanid or dis
 
 POE::Component::SmokeBox::Dists is a L<POE> component that provides non-blocking CPAN distribution 
 searches. It is a wrapper around L<File::Fetch> for C<02packages.details.txt.gz> file retrieval,
-L<IO::Zlib> for extraction and L<Parse::CPAN::Packages> for parsing the packages data.
+L<IO::Zlib> for extraction and L<CPAN::DistnameInfo> for parsing the packages data.
 
 Given either author ( ie. CPAN ID ) or distribution search criteria, expressed as a regular expression,
 it will return to a requesting session all the CPAN distributions that match that pattern.
@@ -321,7 +326,7 @@ it will return to a requesting session all the CPAN distributions that match tha
 The component will retrieve the C<02packages.details.txt.gz> file to the C<.smokebox> directory. If
 that file already exists, a newer version will only be retrieved if the file is older than 6 hours.
 
-The C<02packages.details.txt.gz> is extracted and a L<Parse::CPAN::Packages> object built in order to 
+The C<02packages.details.txt.gz> is extracted and a L<CPAN::DistnameInfo> object built in order to 
 run the search criteria. This process can take a little bit of time.
 
 =head1 CONSTRUCTORS
@@ -380,6 +385,6 @@ This module may be used, modified, and distributed under the same terms as Perl 
 
 =head1 SEE ALSO
 
-L<Parse::CPAN::Packages>
+L<CPAN::DistnameInfo>
 
 =cut
