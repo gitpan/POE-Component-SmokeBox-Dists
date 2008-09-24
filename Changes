@@ -1,6 +1,9 @@
 POE::Component::SmokeBox::Dists
 ===============================
 
+0.06	Wed Sep 24 20:07:54 BST 2008
+	- Added force parameter.
+
 0.04	Wed Sep 17 11:27:42 BST 2008
 	- Switched from Parse::CPAN::Packages to using 
 	  CPAN::DistnameInfo. All processing is now 

@@ -14,7 +14,7 @@ use POE qw(Wheel::Run);
 
 use vars qw($VERSION);
 
-$VERSION = '0.04';
+$VERSION = '0.06';
 
 sub author {
   my $package = shift;
@@ -107,7 +107,7 @@ sub _initialise {
 
   if ( -e $packages_file ) {
      my $mtime = ( stat( $packages_file ) )[9];
-     if ( time() - $mtime > 21600 ) {
+     if ( $self->{force} or ( time() - $mtime > 21600 ) ) {
         $kernel->yield( '_spawn_fetch', $smokebox_dir, $self->{url} );
 	return;
      }
@@ -325,6 +325,7 @@ it will return to a requesting session all the CPAN distributions that match tha
 
 The component will retrieve the C<02packages.details.txt.gz> file to the C<.smokebox> directory. If
 that file already exists, a newer version will only be retrieved if the file is older than 6 hours.
+Specifying the C<force> parameter overrides this behaviour.
 
 The C<02packages.details.txt.gz> is extracted and a L<CPAN::DistnameInfo> object built in order to 
 run the search criteria. This process can take a little bit of time.
@@ -342,6 +343,7 @@ Initiates an author search. Takes a number of parameters:
   'event', the name of the event to return results to, mandatory;
   'search', a regex pattern to match CPAN IDs against, mandatory;
   'session', specify an alternative session to send results to;
+  'force', force the poco to refresh the packages file regardless of age;
 
 =item C<distro>
 
@@ -350,6 +352,7 @@ Initiates a distribution search. Takes a number of parameters:
   'event', the name of the event to return results to, mandatory;
   'search', a regex pattern to match distributions against, mandatory;
   'session', specify an alternative session to send results to;
+  'force', force the poco to refresh the packages file regardless of age;
 
 =back
 
