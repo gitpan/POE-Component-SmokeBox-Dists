@@ -14,6 +14,7 @@ requires 'IO::Zlib' => 0;
 requires 'File::Fetch' => 0;
 #requires 'Parse::CPAN::Packages' => 2.29;
 requires 'CPAN::DistnameInfo' => 0.06;
+requires 'Sort::Versions' => 1.5;
 requires 'URI' => 0;
 clean_files '.smokebox no.network';
 WriteAll();

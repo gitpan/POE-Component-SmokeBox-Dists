@@ -1,6 +1,9 @@
 POE::Component::SmokeBox::Dists
 ===============================
 
+0.08	Tue Nov 11 21:37:24 GMT 2008
+	- Added Phalanx 100 search.
+
 0.06	Wed Sep 24 20:07:54 BST 2008
 	- Added force parameter.
 

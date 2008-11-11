@@ -9,12 +9,13 @@ use File::Path (qw/mkpath/);
 use URI;
 use File::Fetch;
 use CPAN::DistnameInfo;
+use Sort::Versions;
 use IO::Zlib;
 use POE qw(Wheel::Run);
 
 use vars qw($VERSION);
 
-$VERSION = '0.06';
+$VERSION = '0.08';
 
 sub author {
   my $package = shift;
@@ -26,11 +27,18 @@ sub distro {
   return $package->_spawn( @_, command => 'distro' );
 }
 
+sub phalanx {
+  my $package = shift;
+  return $package->_spawn( @_, command => 'phalanx' );
+}
+
 sub _spawn {
   my $package = shift;
   my %opts = @_;
   $opts{lc $_} = delete $opts{$_} for grep { !/^\_/ } keys %opts;
-  foreach my $mandatory ( qw(event search) ) {
+  my @mandatory = qw(event);
+  push @mandatory, 'search' unless $opts{command} eq 'phalanx';
+  foreach my $mandatory ( @mandatory ) {
      next if $opts{ $mandatory };
      carp "The '$mandatory' parameter is a mandatory requirement\n";
      return;
@@ -207,10 +215,14 @@ sub _proc_close {
 
 sub _read_packages {
   my ($packages_file,$command,$search) = @_;
+  my %phalanx;
+  if ( $command eq 'phalanx' ) {
+    $phalanx{ $_ } = undef for _phalanx();
+  }
   my $fh = IO::Zlib->new( $packages_file, "rb" ) or die "$!\n";
   my %dists;
   while (<$fh>) {
-     last if /^\s*$/;
+    last if /^\s*$/;
   }
   while (<$fh>) {
     chomp;
@@ -223,11 +235,26 @@ sub _read_packages {
        next unless eval { $distinfo->cpanid() =~ /$search/ };
        print $path, "\n";
     }
+    elsif ( $command eq 'phalanx' ) {
+       next unless exists $phalanx{ $distinfo->dist };
+       if ( defined $phalanx{ $distinfo->dist } ) { 
+	   my $exists = CPAN::DistnameInfo->new( $phalanx{ $distinfo->dist } );
+	   if ( versioncmp( $distinfo->version, $exists->version ) == 1 ) {
+		$phalanx{ $distinfo->dist } = $path;
+	   }
+       }
+       else { 
+	   $phalanx{ $distinfo->dist } = $path;
+       }
+    }
     else {
        next unless eval { $distinfo->distvname() =~ /$search/ };
        print $path, "\n";
     }
     $dists{ $path } = 1;
+  }
+  if ( $command eq 'phalanx' ) {
+    print $_, "\n" for grep { defined $_ } values %phalanx;
   }
   return;
 }
@@ -268,6 +295,160 @@ sub _smokebox_dir {
   }
 
   return cwd();
+}
+
+sub _phalanx {
+  return qw(
+	Test-Harness
+	Test-Reporter
+	Test-Simple
+	Test-Builder-Tester
+	Sub-Uplevel
+	Test-Exception
+	Test-Tester
+	Test-NoWarnings
+	Test-Tester
+	Pod-Escapes
+	Pod-Simple
+	Test-Pod
+	YAML
+	PathTools
+	Archive-Tar
+	Module-Build
+	Devel-Symdump
+	Pod-Coverage
+	Test-Pod-Coverage
+	Compress-Zlib
+	IO-Zlib
+	Archive-Zip
+	Archive-Tar
+	Storable
+	Digest-MD5
+	URI
+	HTML-Tagset
+	HTML-Parser
+	libwww-perl
+	IPC-Run
+	CPANPLUS
+	DBI
+	DBD-mysql
+	GD
+	MIME-Base64
+	Net-SSLeay
+	perl-ldap
+	XML-Parser
+	Apache-ASP
+	CGI.pm
+	DateManip
+	DBD-Oracle
+	DBD-Pg
+	Digest-SHA1
+	Digest-HMAC
+	HTML-Tagset
+	HTML-Template
+	libnet
+	MailTools
+	MIME-tools
+	Net-DNS
+	Time-HiRes
+	Apache-DBI
+	Apache-Session
+	Apache-Test
+	AppConfig
+	App-Info
+	Authen-PAM
+	Authen-SASL
+	BerkeleyDB
+	Bit-Vector
+	Carp-Clan
+	Chart
+	Class-DBI
+	Compress-Zlib-Perl
+	Config-IniFiles
+	Convert-ASN1
+	Convert-TNEF
+	Convert-UUlib
+	CPAN
+	Crypt-CBC
+	Crypt-DES
+	Crypt-SSLeay
+	Data-Dumper
+	Date-Calc
+	DateTime
+	DBD-DB2
+	DBD-ODBC
+	DBD-SQLite
+	DBD-Sybase
+	Device-SerialPort
+	Digest-SHA
+	Encode
+	Event
+	Excel-Template
+	Expect
+	ExtUtils-MakeMaker
+	File-Scan
+	PathTools
+	File-Tail
+	File-Temp
+	GDGraph
+	GDTextUtil
+	Getopt-Long
+	HTML-Mason
+	Image-Size
+	IMAP-Admin
+	Parse-RecDescent
+	Inline
+	IO
+	Spiffy
+	IO-All
+	IO-Socket-SSL
+	IO-String
+	IO-stringy
+	libxml-perl
+	Mail-Audit
+	Mail-ClamAV
+	Mail-Sendmail
+	Math-Pari
+	MD5
+	MIME-Lite
+	MP3-Info
+	Net-Daemon
+	Net-FTP-Common
+	Net-Ping
+	Net-Server
+	Net-SNMP
+	Net-SSH-Perl
+	Net-Telnet
+	OLE-Storage_Lite
+	Params-Validate
+	PerlMagick
+	PlRPC
+	Pod-Parser
+	POE
+	SNMP
+	SOAP-Lite
+	Spreadsheet-ParseExcel
+	Spreadsheet-WriteExcel
+	Spreadsheet-WriteExcelXML
+	Storable
+	Template-Toolkit
+	TermReadKey
+	Term-ReadLine-Perl
+	Text-Iconv
+	TimeDate
+	Time-modules
+	Unicode-String
+	Unix-Syslog
+	Verilog-Perl
+	WWW-Mechanize
+	XML-DOM
+	XML-Generator
+	XML-LibXML
+	XML-NamespaceSupport
+	XML-SAX
+	XML-Simple
+	XML-Writer
+  );
 }
 
 1;
@@ -332,7 +513,7 @@ run the search criteria. This process can take a little bit of time.
 
 =head1 CONSTRUCTORS
 
-There are two constructors:
+There are a number of constructors:
 
 =over
 
@@ -354,9 +535,17 @@ Initiates a distribution search. Takes a number of parameters:
   'session', specify an alternative session to send results to;
   'force', force the poco to refresh the packages file regardless of age;
 
+=item C<phalanx>
+
+Initiates a search for the Phalanx "100" distributions. Takes a number of parameters:
+
+  'event', the name of the event to return results to, mandatory;
+  'session', specify an alternative session to send results to;
+  'force', force the poco to refresh the packages file regardless of age;
+
 =back
 
-In both constructors, C<session> is only required if the component is not spawned from within
+In all the constructors, C<session> is only required if the component is not spawned from within
 an existing L<POE::Session> or you wish the results event to be sent to an alternative 
 existing L<POE::Session>.
 
@@ -389,5 +578,7 @@ This module may be used, modified, and distributed under the same terms as Perl 
 =head1 SEE ALSO
 
 L<CPAN::DistnameInfo>
+
+L<http://qa.perl.org/phalanx>
 
 =cut
