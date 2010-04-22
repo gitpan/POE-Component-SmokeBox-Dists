@@ -15,7 +15,7 @@ use POE qw(Wheel::Run);
 
 use vars qw($VERSION);
 
-$VERSION = '1.00';
+$VERSION = '1.02';
 
 sub author {
   my $package = shift;
@@ -36,6 +36,9 @@ sub _spawn {
   my $package = shift;
   my %opts = @_;
   $opts{lc $_} = delete $opts{$_} for grep { !/^\_/ } keys %opts;
+
+  $opts{pkg_time} = 21600 unless $opts{pkg_time};
+
   my @mandatory = qw(event);
   push @mandatory, 'search' unless $opts{command} eq 'phalanx';
   foreach my $mandatory ( @mandatory ) {
@@ -115,7 +118,7 @@ sub _initialise {
 
   if ( -e $packages_file ) {
      my $mtime = ( stat( $packages_file ) )[9];
-     if ( $self->{force} or ( time() - $mtime > 21600 ) ) {
+     if ( $self->{force} or ( time() - $mtime > $self->{pkg_time} ) ) {
         $kernel->yield( '_spawn_fetch', $smokebox_dir, $self->{url} );
 	return;
      }
@@ -125,7 +128,7 @@ sub _initialise {
      return;
   }
   
-  # if packages file exists but is older than 6 hours, fetch.
+  # if packages file exists but is older than $self->{pkg_time}, fetch.
   # if packages file does not exist, fetch.
   # otherwise it exists so spawn packages processing.
 
@@ -269,7 +272,7 @@ sub _fetch {
     http://www.cpan.org/
     ftp://ftp.cpan.org/pub/CPAN/
   );
-  unshift @urls, $url if $url;
+  @urls = ( $url ) if $url;
   my $file;
   foreach my $url ( @urls ) {
     my $uri = URI->new( $url ) or next;
@@ -299,6 +302,7 @@ sub _smokebox_dir {
   return cwd();
 }
 
+# List taken from Bundle::Phalanx100 v0.07
 sub _phalanx {
   return qw(
 	Test-Harness
@@ -341,7 +345,7 @@ sub _phalanx {
 	XML-Parser
 	Apache-ASP
 	CGI.pm
-	DateManip
+	Date-Manip
 	DBD-Oracle
 	DBD-Pg
 	Digest-SHA1
@@ -389,7 +393,7 @@ sub _phalanx {
 	Expect
 	ExtUtils-MakeMaker
 	File-Scan
-	PathTools
+	File-Spec
 	File-Tail
 	File-Temp
 	GDGraph
@@ -437,8 +441,8 @@ sub _phalanx {
 	TermReadKey
 	Term-ReadLine-Perl
 	Text-Iconv
-	TimeDate
-	Time-modules
+  TimeDate
+  Time-modules
 	Unicode-String
 	Unix-Syslog
 	Verilog-Perl
@@ -517,6 +521,9 @@ run the search criteria. This process can take a little bit of time.
 
 There are a number of constructors:
 
+You may also set arbitary keys to pass arbitary data along with your request. These must be prefixed
+with an underscore _.
+
 =over
 
 =item C<author>
@@ -527,6 +534,8 @@ Initiates an author search. Takes a number of parameters:
   'search', a regex pattern to match CPAN IDs against, mandatory;
   'session', specify an alternative session to send results to;
   'force', force the poco to refresh the packages file regardless of age;
+  'pkg_time', in seconds before the poco refreshes the packages file, defaults to 6 hours;
+  'url', the CPAN mirror url to use, defaults to a built-in list;
 
 =item C<distro>
 
@@ -536,6 +545,8 @@ Initiates a distribution search. Takes a number of parameters:
   'search', a regex pattern to match distributions against, mandatory;
   'session', specify an alternative session to send results to;
   'force', force the poco to refresh the packages file regardless of age;
+  'pkg_time', in seconds before the poco refreshes the packages file, defaults to 6 hours;
+  'url', the CPAN mirror url to use, defaults to a built-in list;
 
 =item C<phalanx>
 
@@ -544,6 +555,8 @@ Initiates a search for the Phalanx "100" distributions. Takes a number of parame
   'event', the name of the event to return results to, mandatory;
   'session', specify an alternative session to send results to;
   'force', force the poco to refresh the packages file regardless of age;
+  'pkg_time', in seconds before the poco refreshes the packages file, defaults to 6 hours;
+  'url', the CPAN mirror url to use, defaults to a built-in list;
 
 =back
 
