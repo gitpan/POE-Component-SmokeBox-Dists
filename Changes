@@ -1,4 +1,20 @@
 ==============================
+2011-09-01 19:34:47 +0100 1.06
+==============================
+
+  commit f5d54a76e17550cefb5c3f99c9db226a8c5eb25a
+  Author: Chris 'BinGOs' Williams <chris@bingosnet.co.uk>
+  Date:   Thu Sep 1 19:34:47 2011 +0100
+  
+    Strip the trailing whitespace
+
+  commit fec2af851c83bbc56838da70323127b985769af6
+  Author: Chris 'BinGOs' Williams <chris@bingosnet.co.uk>
+  Date:   Thu Sep 1 19:30:17 2011 +0100
+  
+    Shuffle around the included CPAN mirrors 
+
+==============================
 2010-12-09 14:42:23 +0000 1.04
 ==============================
 
