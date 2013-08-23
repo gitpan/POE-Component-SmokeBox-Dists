@@ -1,24 +1,78 @@
+
 use strict;
-use inc::Module::Install;
-name 'POE-Component-SmokeBox-Dists';
-author 'Chris Williams <chris@bingosnet.co.uk>';
-license 'perl';
-auto_license holder => 'Chris Williams';
-perl_version '5.006';
-abstract_from 'lib/POE/Component/SmokeBox/Dists.pm';
-version_from 'lib/POE/Component/SmokeBox/Dists.pm';
-readme_from 'lib/POE/Component/SmokeBox/Dists.pm';
-build_requires 'Test::More' => 0.47;
-requires 'File::Spec' => 0;
-requires 'POE' => 1.004;
-requires 'File::Path' => 0;
-requires 'IO::Zlib' => 0;
-requires 'File::Fetch' => 0;
-requires 'CPAN::DistnameInfo' => 0.06;
-requires 'Sort::Versions' => 1.5;
-requires 'URI' => 0;
-clean_files '.smokebox no.network';
-auto_provides;
-githubmeta;
-makemaker_args(dist => { PREOP => "$^X ./tools/git-log.pl > ./Changes" });
-WriteAll();
+use warnings;
+
+use 5.006;
+
+use ExtUtils::MakeMaker 6.30;
+
+
+
+my %WriteMakefileArgs = (
+  "ABSTRACT" => "Search for CPAN distributions by cpanid or distribution name",
+  "AUTHOR" => "Chris Williams <chris\@bingosnet.co.uk>",
+  "BUILD_REQUIRES" => {
+    "Test::More" => "0.47"
+  },
+  "CONFIGURE_REQUIRES" => {
+    "ExtUtils::MakeMaker" => "6.30"
+  },
+  "DISTNAME" => "POE-Component-SmokeBox-Dists",
+  "EXE_FILES" => [],
+  "LICENSE" => "perl",
+  "NAME" => "POE::Component::SmokeBox::Dists",
+  "PREREQ_PM" => {
+    "CPAN::DistnameInfo" => "0.06",
+    "File::Fetch" => 0,
+    "File::Path" => 0,
+    "File::Spec" => 0,
+    "IO::Zlib" => 0,
+    "POE" => "1.004",
+    "Sort::Versions" => "1.5",
+    "URI" => 0
+  },
+  "TEST_REQUIRES" => {
+    "Capture::Tiny" => 0,
+    "Test::More" => "0.88",
+    "blib" => 0
+  },
+  "VERSION" => "1.08",
+  "test" => {
+    "TESTS" => "t/*.t"
+  }
+);
+
+
+unless ( eval { ExtUtils::MakeMaker->VERSION(6.63_03) } ) {
+  my $tr = delete $WriteMakefileArgs{TEST_REQUIRES};
+  my $br = $WriteMakefileArgs{BUILD_REQUIRES};
+  for my $mod ( keys %$tr ) {
+    if ( exists $br->{$mod} ) {
+      $br->{$mod} = $tr->{$mod} if $tr->{$mod} > $br->{$mod};
+    }
+    else {
+      $br->{$mod} = $tr->{$mod};
+    }
+  }
+}
+
+unless ( eval { ExtUtils::MakeMaker->VERSION(6.56) } ) {
+  my $br = delete $WriteMakefileArgs{BUILD_REQUIRES};
+  my $pp = $WriteMakefileArgs{PREREQ_PM};
+  for my $mod ( keys %$br ) {
+    if ( exists $pp->{$mod} ) {
+      $pp->{$mod} = $br->{$mod} if $br->{$mod} > $pp->{$mod};
+    }
+    else {
+      $pp->{$mod} = $br->{$mod};
+    }
+  }
+}
+
+delete $WriteMakefileArgs{CONFIGURE_REQUIRES}
+  unless eval { ExtUtils::MakeMaker->VERSION(6.52) };
+
+WriteMakefile(%WriteMakefileArgs);
+
+
+
